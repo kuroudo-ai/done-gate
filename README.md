@@ -70,6 +70,24 @@ That is all. It takes effect from the **next** session you open.
   the installer switches with `python3 install.py --lang ja` or `GUARDRAILS_LANG=ja`.
 - **Fails open.** If done_gate itself breaks, your work is never stopped; one line is written to `~/.claude/guardrails/guardrails.log`.
 
+## Modes
+
+Set `done_gate_mode` in `~/.claude/guardrails/config.json`:
+
+- `"block"` (default): stops the reply once, as described above, and sends the note to the agent.
+- `"warn"`: never stops. The same note is shown as a warning (`systemMessage` in the hook output, and on stderr),
+  and the reply goes through as written. The agent is not asked to continue, so it is up to you to act on the warning.
+- Any other value (a typo included) is treated as `"block"`, and one line is written to the log. A bad setting never turns the check off.
+  (If done_gate crashes, it still lets your work through, as described under "Fails open". That rule is for bugs, not for settings.)
+
+## How we use them at our company
+
+At our company (Human Supply Co., Ltd., Japan), we run our own internal versions of these checks, and the owner chose these settings:
+
+- `done_gate`: warn style (it does not stop the agent).
+- The secret check: log only, and we ask the destination to delete what was sent afterwards.
+- `pipe_guard`, `unknown_gate` and `no_excuse_gate`: block. In the last 7 days they stopped our agent 59, 4 and 6 times.
+
 ## Honest limits
 
 - **It uses pattern matching (regular expressions).** An agent that phrases things differently can slip past it.
@@ -77,6 +95,8 @@ That is all. It takes effect from the **next** session you open.
 - **It checks that evidence exists, not that the evidence supports the claim.** If the agent ran an unrelated test that passed,
   "fixed" will go through.
 - The second time the same message appears, it always goes through ("remind once" rather than "block forever").
+- The `"warn"` mode uses `systemMessage`, which both Claude Code and Codex document as a warning shown to the user;
+  it is tested by its output only and has not been run in a real session yet.
 
 ## Make sure it works
 

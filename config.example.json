@@ -3,5 +3,7 @@
   "secret_files": ["~/.env", "~/.claude/*.env", "./.env"],
   "pipe_guard_tools": [],
   "secret_guard_tools": [],
+  "done_gate_mode": "block",
+  "secret_guard_mode": "block",
   "message_language": "en"
 }

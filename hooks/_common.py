@@ -46,6 +46,21 @@ def config():
         return {}
 
 
+def mode(hook, key, allowed):
+    """config の key（例 "done_gate_mode"）を読む。allowed[0] が既定値（＝止める側）。
+
+    未指定なら既定値。知らない値なら既定値に戻してログに1行書く（壊れた設定で黙って見張りが弱まらないよう、通す側ではなく止める側へ倒す）。
+    """
+    raw = config().get(key)
+    if raw is None:
+        return allowed[0]
+    val = str(raw).strip().lower()
+    if val in allowed:
+        return val
+    log(hook, "invalid %s=%r (allowed: %s) -> using %r" % (key, raw, "/".join(allowed), allowed[0]))
+    return allowed[0]
+
+
 # Text that the hooks send back to the agent. English by default; config.json "message_language": "ja" for Japanese.
 # Each entry is a complete message with named placeholders (no sentence fragments glued together).
 MESSAGES = {
@@ -299,6 +314,13 @@ def already_blocked(hook, text, data=None):
 
 def stop_block(reason):
     sys.stdout.write(json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False))
+    sys.stdout.flush()
+
+
+def warn(reason):
+    """止めずに見せる。systemMessage（Claude Code・Codex とも利用者に警告として表示）＋ stderr。"""
+    sys.stderr.write(reason + "\n")
+    sys.stdout.write(json.dumps({"systemMessage": reason}, ensure_ascii=False))
     sys.stdout.flush()
 
 

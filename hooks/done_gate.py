@@ -10,6 +10,7 @@ AI エージェントは、テストを走らせていなくても「修正し�
   ② このターン（最後の人の発言以降）のツール結果に「測った痕跡」があるか
      （PASS/FAIL・passed/failed・exit code・rc=・テスト件数など）
   ①あり・②なし のときだけ、1回止めて「何で確かめたかを書くか、確かめてから言い直す」よう返す。
+  config の done_gate_mode が "warn" なら止めず、同じ文面を警告（systemMessage＋stderr）として出すだけ。
 """
 import os
 import re
@@ -69,6 +70,10 @@ def main(data):
         return
     if C.already_blocked(HOOK, text, data):
         C.log(HOOK, "skip: 同じ文面で止め済み")
+        return
+    if C.mode(HOOK, "done_gate_mode", ("block", "warn")) == "warn":
+        C.log(HOOK, "WARN: 痕跡なしの完了主張「%s」" % claim[:80])
+        C.warn(C.msg("done_gate.block", claim=claim[:80]))
         return
     C.log(HOOK, "BLOCK: 痕跡なしの完了主張「%s」" % claim[:80])
     C.stop_block(C.msg("done_gate.block", claim=claim[:80]))

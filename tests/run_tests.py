@@ -390,6 +390,101 @@ check_text("secret_guard: message_language=ja gives Japanese", "secret_guard.py"
            wf("https://example.com/?ja=1&t=zq7-THIS-IS-A-FAKE-TOKEN-91xx"), "DENY", "鍵が入っています",
            {"GUARDRAILS_CONFIG": JA_FULL_CFG})
 
+print("=== modes: done_gate_mode (block / warn) and secret_guard_mode (block / log); a bad value falls back to block")
+LOG = os.path.join(TMP, ".claude", "guardrails", "guardrails.log")
+LEDGER = os.path.join(TMP, ".claude", "guardrails", "secret_ledger.log")
+SECRET = "zq7-THIS-IS-A-FAKE-TOKEN-91xx"
+GH = "ghp_" + "C" * 36
+
+
+def mode_cfg(name, **keys):
+    path = os.path.join(TMP, "config_%s.json" % name)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(dict({"secret_files": [ENVF]}, **keys), f)
+    return {"GUARDRAILS_CONFIG": path}
+
+
+def read(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+def check_with(name, hook, payload, want, env_extra, extra_checks):
+    """Run with another config, then check more things about the result (each counted as its own PASS/FAIL)."""
+    global ENV, PASS, FAIL
+    if not os.path.exists(os.path.join(HOOKS, hook)):
+        check(name, hook, payload, want)   # counts the skip
+        return
+    saved = ENV
+    ENV = dict(ENV, **env_extra)
+    try:
+        check(name, hook, payload, want)
+    finally:
+        ENV = saved
+    for label, fn in extra_checks:
+        ok = bool(fn(LAST_OUT[0]))
+        PASS += ok
+        FAIL += (not ok)
+        print("%s %-58s" % ("✅" if ok else "🔴", "  " + label))
+
+
+def sysmsg(out):
+    try:
+        return json.loads(out).get("systemMessage") or ""
+    except ValueError:
+        return ""
+
+
+check_with("done_gate_mode=block (explicit) -> stop", D,
+           stop([user("fix"), assistant("Mode test block: I fixed the parser.")]), "BLOCK",
+           mode_cfg("dg_block", done_gate_mode="block"), [])
+check_with("done_gate_mode=warn -> never stops", D,
+           stop([user("fix"), assistant("Mode test warn: I fixed the parser.")]), "OK",
+           mode_cfg("dg_warn", done_gate_mode="warn"),
+           [("warn: same message shown as systemMessage", lambda o: "no tool result in this turn" in sysmsg(o)),
+            ("warn: the claim is quoted in the message", lambda o: "I fixed the parser" in sysmsg(o)),
+            ("warn: no decision field in the output", lambda o: '"decision"' not in o)])
+check_with("done_gate_mode=warn, claim with evidence -> silent", D,
+           stop([user("fix"), tool_result("3 passed"), assistant("Mode test warn ok: I fixed the parser.")]), "OK",
+           mode_cfg("dg_warn", done_gate_mode="warn"), [("warn: nothing printed when there is evidence", lambda o: o == "")])
+check_with("done_gate_mode=WARN (any case) -> never stops", D,
+           stop([user("fix"), assistant("Mode test WARN: I fixed the parser.")]), "OK",
+           mode_cfg("dg_warn_uc", done_gate_mode="WARN"), [])
+check_with("done_gate_mode=bogus -> falls back to block", D,
+           stop([user("fix"), assistant("Mode test bogus: I fixed the parser.")]), "BLOCK",
+           mode_cfg("dg_bad", done_gate_mode="warm"),
+           [("bad done_gate_mode: one line in the log", lambda o: read(LOG).count("invalid done_gate_mode='warm'") == 1)])
+
+LEAK = wf("https://example.com/?mode=1&t=" + SECRET)
+check_with("secret_guard_mode=block (explicit) -> deny", "secret_guard.py", LEAK, "DENY",
+           mode_cfg("sg_block", secret_guard_mode="block"), [])
+if os.path.exists(LEDGER):
+    os.remove(LEDGER)
+check_with("secret_guard_mode=log -> never denies", "secret_guard.py", LEAK, "OK",
+           mode_cfg("sg_log", secret_guard_mode="log"),
+           [("log: prints nothing (the tool call goes through)", lambda o: o == ""),
+            ("log: one ledger line with tool, file and key name",
+             lambda o: [ln.split("\t")[1:] for ln in read(LEDGER).splitlines()] == [["WebFetch", ENVF, "API_TOKEN"]]),
+            ("log: ledger line starts with a timestamp",
+             lambda o: read(LEDGER)[:4].isdigit() and read(LEDGER)[4] == "-"),
+            ("log: the secret value is NOT in the ledger", lambda o: SECRET not in read(LEDGER)),
+            ("log: the secret value is NOT in the log", lambda o: SECRET not in read(LOG))])
+check_with("secret_guard_mode=log, key-format hit -> never denies", "secret_guard.py",
+           {"hook_event_name": "PreToolUse", "tool_name": "mcp__chat__send", "tool_input": {"text": GH}}, "OK",
+           mode_cfg("sg_log", secret_guard_mode="log"),
+           [("log: key-format hit appended (file '-')",
+             lambda o: read(LEDGER).splitlines()[-1].split("\t")[1:] == ["mcp__chat__send", "-", "GitHub token format"]),
+            ("log: the token is NOT in the ledger", lambda o: GH not in read(LEDGER) and "C" * 20 not in read(LEDGER))])
+check_with("secret_guard_mode=log, no secret -> no ledger line", "secret_guard.py", wf("https://example.com/clean"), "OK",
+           mode_cfg("sg_log", secret_guard_mode="log"),
+           [("log: ledger unchanged when nothing leaks", lambda o: len(read(LEDGER).splitlines()) == 2)])
+check_with("secret_guard_mode=bogus -> falls back to deny", "secret_guard.py", LEAK, "DENY",
+           mode_cfg("sg_bad", secret_guard_mode="off"),
+           [("bad secret_guard_mode: one line in the log", lambda o: read(LOG).count("invalid secret_guard_mode='off'") == 1)])
+
 sys.dont_write_bytecode = True   # never leave __pycache__ (with this machine's paths) inside the package
 sys.path.insert(0, HOOKS)
 import _common  # noqa: E402

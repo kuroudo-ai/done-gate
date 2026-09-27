@@ -45,6 +45,22 @@ MUTANTS = [
      'r"了(?:吗|嗎|么|麼)", ', ""),
     ("_common: ignore message_language (always English)", "hooks/_common.py",
      'return lang if lang in MESSAGES else "en"', 'return "en"'),
+    ("done_gate: warn mode silently drops the message", "hooks/done_gate.py",
+     '        C.warn(C.msg("done_gate.block", claim=claim[:80]))\n        return', "        return"),
+    ("done_gate: warn mode still blocks", "hooks/done_gate.py",
+     '("block", "warn")) == "warn":', '("block", "warn")) == "never":'),
+    ("_common: warn goes to stderr only (no systemMessage)", "hooks/_common.py",
+     '    sys.stdout.write(json.dumps({"systemMessage": reason}, ensure_ascii=False))', "    pass"),
+    ("secret_guard: log mode writes the value into the ledger", "hooks/secret_guard.py",
+     "        write_ledger(tool, hits)\n", '        write_ledger(tool, hits + [("-", text)])\n'),
+    ("secret_guard: log mode skips the ledger", "hooks/secret_guard.py",
+     "        write_ledger(tool, hits)\n", "        pass\n"),
+    ("secret_guard: log mode still denies", "hooks/secret_guard.py",
+     '("block", "log")) == "log":', '("block", "log")) == "never":'),
+    ("_common: invalid mode falls open (uses the non-blocking mode)", "hooks/_common.py",
+     '"/".join(allowed), allowed[0]))\n    return allowed[0]', '"/".join(allowed), allowed[0]))\n    return allowed[-1]'),
+    ("_common: invalid mode is not logged", "hooks/_common.py",
+     '    log(hook, "invalid %s=%r', '    0 and log(hook, "invalid %s=%r'),
 ]
 
 
@@ -58,6 +74,9 @@ USED_BY = {
     "_common: drop the session from the stop-once memory": ["done_gate.py", "unknown_gate.py", "no_excuse_gate.py"],
     "_common: drop the stop-once memory": ["done_gate.py", "unknown_gate.py", "no_excuse_gate.py"],
     "phrases: drop the Chinese question exclusion (完成了吗)": ["done_gate.py"],
+    "_common: warn goes to stderr only (no systemMessage)": ["done_gate.py"],
+    "_common: invalid mode falls open (uses the non-blocking mode)": ["done_gate.py", "secret_guard.py"],
+    "_common: invalid mode is not logged": ["done_gate.py", "secret_guard.py"],
 }
 
 
