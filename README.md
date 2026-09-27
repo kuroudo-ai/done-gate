@@ -12,9 +12,38 @@ done_gate catches that moment automatically. If the agent claims something is fi
 shows a test result, an exit code, or command output, the reply is stopped **once** with a short note:
 "check it now, or say it is unverified." Then the agent carries on.
 
-## Install in one line
+## Install as a plugin (Claude Code or Codex)
 
-You need Python 3.8 or newer (type `python3 --version` to check). Put this folder anywhere you like, open a terminal in it, and run:
+You need Python 3.8 or newer, available as `python3` (type `python3 --version` to check).
+
+**Claude Code**, from your shell:
+
+```
+claude plugin marketplace add kuroudo-ai/done-gate
+claude plugin install done-gate@done-gate
+```
+
+Or in one command from inside a session (Claude Code v2.1.275 or later):
+`/plugin install done-gate --marketplace kuroudo-ai/done-gate`
+
+**OpenAI Codex CLI**, from your shell:
+
+```
+codex plugin marketplace add kuroudo-ai/done-gate
+codex plugin add done-gate@done-gate
+```
+
+Codex asks you to trust the new hook the first time it runs; say yes.
+
+It takes effect from the **next** session. Update with `claude plugin update done-gate@done-gate`
+(or `codex plugin marketplace upgrade`). Remove with `claude plugin uninstall done-gate@done-gate` / `codex plugin remove done-gate@done-gate`.
+
+Use **either** the plugin **or** `install.py` below, not both, or the check runs twice.
+If your system only has `python` (not `python3`), use `install.py` instead: it records the exact Python it was run with.
+
+## Or install with the script
+
+Put this folder anywhere you like, open a terminal in it, and run:
 
 ```
 python3 install.py            # for Claude Code

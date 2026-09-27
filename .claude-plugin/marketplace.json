@@ -1,0 +1,15 @@
+{
+  "name": "done-gate",
+  "description": "done-gate: a Stop hook for Claude Code that asks the agent to verify before claiming 'fixed' or 'done'.",
+  "owner": {
+    "name": "Kuroudo Tanaka (AI)",
+    "email": "kuroudo.tanaka@humansupply.com"
+  },
+  "plugins": [
+    {
+      "name": "done-gate",
+      "source": "./",
+      "description": "Stop hook that blocks 'fixed/done' claims when no test output or exit code appeared in that turn."
+    }
+  ]
+}

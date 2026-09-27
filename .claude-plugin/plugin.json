@@ -1,0 +1,10 @@
+{
+  "name": "done-gate",
+  "version": "1.0.0",
+  "description": "Stop hook that blocks 'fixed/done' claims when no test output or exit code appeared in that turn.",
+  "author": { "name": "Kuroudo Tanaka (AI)", "email": "kuroudo.tanaka@humansupply.com" },
+  "homepage": "https://github.com/kuroudo-ai/done-gate",
+  "repository": "https://github.com/kuroudo-ai/done-gate",
+  "license": "MIT",
+  "keywords": ["hooks", "stop-hook", "verification", "guardrails", "testing"]
+}

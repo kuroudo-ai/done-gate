@@ -11,9 +11,38 @@ AI のコーディングエージェント（Claude Code、OpenAI Codex など�
 done_gate は、その瞬間を自動で捕まえます。「直しました／完了しました」と言っているのに、**このターン**のどこにも
 テスト結果・終了コード・実行出力が無ければ、返答を**1回だけ**止めて「いま確かめるか、未確認と書き直すか」を返します。あとは作業が続きます。
 
-## 入れ方（1行）
+## 入れ方：プラグインとして（Claude Code / Codex）
 
-Python 3.8 以上が必要です（`python3 --version` で確かめられます）。このフォルダを好きな場所に置き、そのフォルダでターミナルを開いて：
+Python 3.8 以上が `python3` という名前で使えることが必要です（`python3 --version` で確かめられます）。
+
+**Claude Code**（ターミナルで）：
+
+```
+claude plugin marketplace add kuroudo-ai/done-gate
+claude plugin install done-gate@done-gate
+```
+
+セッションの中から1行で入れることもできます（Claude Code v2.1.275 以降）：
+`/plugin install done-gate --marketplace kuroudo-ai/done-gate`
+
+**OpenAI Codex CLI**（ターミナルで）：
+
+```
+codex plugin marketplace add kuroudo-ai/done-gate
+codex plugin add done-gate@done-gate
+```
+
+Codex は新しいフックを初回に「信頼しますか」と聞いてきます。許可してください。
+
+**次に開くセッションから**効きます。更新は `claude plugin update done-gate@done-gate`（Codex は `codex plugin marketplace upgrade`）、
+外すときは `claude plugin uninstall done-gate@done-gate` ／ `codex plugin remove done-gate@done-gate`。
+
+プラグインと下の `install.py` は**どちらか片方だけ**使ってください。両方入れると同じ見張りが2回走ります。
+`python3` が無く `python` しか無い環境では `install.py` を使ってください（実行した Python をそのまま記録します）。
+
+## 入れ方：スクリプトで
+
+このフォルダを好きな場所に置き、そのフォルダでターミナルを開いて：
 
 ```
 python3 install.py            # Claude Code に入れる
