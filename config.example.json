@@ -1,0 +1,7 @@
+{
+  "notes_dirs": ["~/notes"],
+  "secret_files": ["~/.env", "~/.claude/*.env", "./.env"],
+  "pipe_guard_tools": [],
+  "secret_guard_tools": [],
+  "message_language": "en"
+}
