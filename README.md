@@ -1,5 +1,9 @@
 # done_gate — stop your AI agent from saying "Fixed!" without checking (free edition)
 
+![done_gate demo](docs/demo_done_gate.gif)
+
+A real run, replayed: the agent says "I fixed the login bug." without testing, done_gate stops it once, and it rewrites honestly. With a test run first, it goes straight through.
+
 ## The problem, in plain words
 
 AI coding agents (Claude Code, OpenAI Codex, and others) often say **"Fixed!" or "Done!" without running a single test.**
