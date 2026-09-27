@@ -39,6 +39,7 @@ TEXT = {
         "codex_next": "Takes effect from the next Codex session. Codex asks you to trust new hooks the first time; say yes.",
         "codex_remove": "To remove: python3 install.py --codex --uninstall",
         "claude_next": "Takes effect from the next Claude Code session. To remove: python3 install.py --uninstall",
+        "store_python": "Warning: `python` was not found on PATH, so the full path %(py)s was used. If a Microsoft Store update moves Python, run install again.",
     },
     "ja": {
         "bad_json": "%(name)s が読めませんでした（JSON の書き方に誤りがあります）。何も変えずに止めます。",
@@ -52,6 +53,7 @@ TEXT = {
         "codex_next": "次に開く Codex のセッションから効きます。★Codex は新しいフックを初回に「確認して」と聞いてくるので、許可してください。",
         "codex_remove": "外すときは: python3 install.py --codex --uninstall",
         "claude_next": "次に開く Claude Code のセッションから効きます。外すときは: python3 install.py --uninstall",
+        "store_python": "注意: PATH に `python` が見つからなかったので、絶対パス %(py)s で登録しました。Microsoft Store の更新で Python の場所が変わったら、もう一度入れ直してください。",
     },
 }
 
@@ -75,9 +77,22 @@ def settings_path(codex=False):
     return os.path.join(home, ".claude", "settings.json")
 
 
+def python_cmd(executable=None, platform=None, which=None):
+    """フックを起動する Python を返す（コマンド, PATH に無くて絶対パスにしたか）。
+    Microsoft Store 版 Python の本体は WindowsApps\\<版番号入りフォルダ> にあり、更新でフォルダ名が変わる。
+    そこを直接書くと更新後にフックが起動しなくなるので、PATH 上の `python` で書く。"""
+    py = (sys.executable if executable is None else executable) or "python3"
+    if (sys.platform if platform is None else platform) == "win32" and "windowsapps" in py.lower():
+        if (which or shutil.which)("python"):
+            return "python", False
+        return py, True
+    return py, False
+
+
 def command_for(hook):
-    py = sys.executable or "python3"
-    return '"%s" "%s"' % (py, os.path.join(HOOKS_DIR, hook))
+    py = python_cmd()[0]
+    cmd = py if py == "python" else '"%s"' % py
+    return '%s "%s"' % (cmd, os.path.join(HOOKS_DIR, hook))
 
 
 def ours(entry):
@@ -172,6 +187,8 @@ def main(argv):
     write(path, settings)
     print(t["installed"] % {"list": ", ".join(installed)})
     print(t["backup"] % {"bak": bak or t["no_file"]})
+    if python_cmd()[1]:
+        print(t["store_python"] % {"py": python_cmd()[0]})
     if codex:
         print(t["codex_next"])
         print(t["codex_remove"])

@@ -2,6 +2,7 @@
   "notes_dirs": ["~/notes"],
   "secret_files": ["~/.env", "~/.claude/*.env", "./.env"],
   "pipe_guard_tools": [],
+  "pipe_guard_use_defaults": true,
   "secret_guard_tools": [],
   "done_gate_mode": "block",
   "secret_guard_mode": "block",

@@ -89,7 +89,7 @@ python3 install.py --codex    # OpenAI Codex CLI に入れる
 
 - `done_gate`：警告型（エージェントを止めない）。
 - 鍵の見張り：記録だけ。送ってしまったものは、後から送り先に削除を頼みます。
-- `pipe_guard`・`unknown_gate`・`no_excuse_gate`：止める。直近7日間で、それぞれ 59回・4回・6回 エージェントを止めました。
+- `pipe_guard`・`no_excuse_gate`・`unknown_gate`：止める。2026年9月20日〜27日の7日間で、それぞれ 76回・6回・3回 エージェントを止めました。
 
 ## 正直な限界
 

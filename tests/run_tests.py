@@ -63,8 +63,8 @@ def run_hook(hook, payload, close_stdin=True):
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ENV)
     p.stdin.write(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
     p.stdin.flush()
-    if close_stdin:
-        p.stdin.close()
+    # close_stdin=True: communicate() closes stdin itself. Closing it here first makes
+    # Python <=3.13 raise "ValueError: flush of closed file" inside communicate().
     t0 = time.time()
     try:
         out, err = p.communicate(timeout=10) if close_stdin else (p.stdout.read(), p.stderr.read())
@@ -484,6 +484,47 @@ check_with("secret_guard_mode=log, no secret -> no ledger line", "secret_guard.p
 check_with("secret_guard_mode=bogus -> falls back to deny", "secret_guard.py", LEAK, "DENY",
            mode_cfg("sg_bad", secret_guard_mode="off"),
            [("bad secret_guard_mode: one line in the log", lambda o: read(LOG).count("invalid secret_guard_mode='off'") == 1)])
+
+print("=== pipe_guard: redirections (2>&1, >&2, &>, |&) are not statement separators; real & and && still are")
+P = "pipe_guard.py"
+check("tool 2>&1 | tail -1 -> deny", P, bash("inbox_check 2>&1 | tail -1"), "DENY")
+check("tool |& tail -1 -> deny", P, bash("inbox_check |& tail -1"), "DENY")
+check("python3 tool.py 2>&1 | head -> deny", P, bash("python3 notify_send.py 2>&1 | head"), "DENY")
+check("tool 2>&1 >&2 | grep -> deny", P, bash("inbox_check --all 2>&1 >&2 | grep -v OK"), "DENY")
+check("tool &>/dev/stdout | tail -> deny", P, bash("inbox_check --all &>/dev/stdout | tail -1"), "DENY")
+check("tool 2>&1 > out.txt -> pass", P, bash("inbox_check 2>&1 > out.txt"), "OK")
+check("tool > out.txt 2>&1 -> pass", P, bash("inbox_check > out.txt 2>&1"), "OK")
+check("tool &> out.txt; then read the file -> pass", P, bash("inbox_check &> out.txt; cat out.txt"), "OK")
+check("sleep 1 & tool -> pass", P, bash("sleep 1 & inbox_check"), "OK")
+check("tool > f & (background), other cmd | head -> pass", P,
+      bash("inbox_check > /tmp/o.txt & grep -c ERR /tmp/log.txt | head"), "OK")
+check("tool > f && other cmd | head -> pass", P,
+      bash("inbox_check > /tmp/o.txt && grep -c ERR /tmp/o.txt | head"), "OK")
+check("unregistered tool 2>&1 | tail -> pass", P, bash("mytool 2>&1 | tail"), "OK")
+
+print("=== pipe_guard: built-in default tools (on unless pipe_guard_use_defaults is false; your tools are added to them)")
+NO_CFG = {"GUARDRAILS_CONFIG": os.path.join(TMP, "no_such_config.json")}
+check_with("no config at all: pytest 2>&1 | tail -5 -> deny", P, bash("pytest 2>&1 | tail -5"), "DENY", NO_CFG, [])
+check_with("no config at all: npm test | tail -> deny", P, bash("npm test | tail"), "DENY", NO_CFG, [])
+check_with("no config at all: ls | grep x -> pass", P, bash("ls | grep x"), "OK", NO_CFG, [])
+check_with("no config at all: ps aux | grep python -> pass", P, bash("ps aux | grep python"), "OK", NO_CFG, [])
+check("defaults + your tools: pytest 2>&1 | tail -5 -> deny", P, bash("pytest 2>&1 | tail -5"), "DENY")
+check("defaults + your tools: npm test | tail -> deny", P, bash("npm test | tail"), "DENY")
+check("defaults + your tools: your tool (inbox_check) | tail -> deny", P, bash("inbox_check | tail"), "DENY")
+check("default: python3 -m pytest -q | tail -3 -> deny", P, bash("python3 -m pytest -q | tail -3"), "DENY")
+check("default: git push 2>&1 | tail -3 -> deny", P, bash("git push origin main 2>&1 | tail -3"), "DENY")
+check("default: uv sync | tail (uv is also a wrapper) -> deny", P, bash("uv sync | tail -2"), "DENY")
+check("default: go test ./... | grep FAIL -> deny", P, bash("go test ./... | grep FAIL"), "DENY")
+check("default: ls | grep x -> pass", P, bash("ls | grep x"), "OK")
+check("default: ps aux | grep python -> pass", P, bash("ps aux | grep python"), "OK")
+check("default: npm view (subcommand not listed) | head -> pass", P, bash("npm view react versions | head"), "OK")
+check("default: git log | head (subcommand not listed) -> pass", P, bash("git log --oneline | head -20"), "OK")
+OPT_OUT = mode_cfg("pg_optout", pipe_guard_use_defaults=False, pipe_guard_tools=["inbox_check"])
+check_with("use_defaults=false: pytest | tail -> pass", P, bash("pytest 2>&1 | tail -5"), "OK", OPT_OUT, [])
+check_with("use_defaults=false: npm test | tail -> pass", P, bash("npm test | tail"), "OK", OPT_OUT, [])
+check_with("use_defaults=false: your tool still -> deny", P, bash("inbox_check | tail"), "DENY", OPT_OUT, [])
+check_with("use_defaults=false and no tools -> pass", P, bash("pytest | tail"), "OK",
+           mode_cfg("pg_optout_empty", pipe_guard_use_defaults=False), [])
 
 sys.dont_write_bytecode = True   # never leave __pycache__ (with this machine's paths) inside the package
 sys.path.insert(0, HOOKS)

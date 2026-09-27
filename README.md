@@ -90,7 +90,7 @@ At our company (Human Supply Co., Ltd., Japan), we run our own internal versions
 
 - `done_gate`: warn style (it does not stop the agent).
 - The secret check: log only, and we ask the destination to delete what was sent afterwards.
-- `pipe_guard`, `unknown_gate` and `no_excuse_gate`: block. In the last 7 days they stopped our agent 59, 4 and 6 times.
+- `pipe_guard`, `no_excuse_gate` and `unknown_gate`: block. In the 7 days from September 20 to 27, 2026, they stopped our agent 76, 6 and 3 times.
 
 ## Honest limits
 
