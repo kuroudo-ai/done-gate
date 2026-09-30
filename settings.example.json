@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ~/.claude/agent-guardrails/hooks/done_gate.py"
+            "command": "python3 ~/.claude/agent-guardrails/hooks/ag_done_gate.py"
           }
         ]
       }
